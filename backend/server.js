@@ -5,6 +5,7 @@ import "dotenv/config";
 import supabase from "./config/storage.js";
 import pool from "./config/db.js";
 import healthRouter from "./routes/healthRoutes.js";
+import documentRouter from "./routes/documents.js";
 
 const app = express();
 
@@ -12,15 +13,16 @@ app.use(express.json());
 app.use(cors());
 
 app.use("/", healthRouter);
+app.use("/documents", documentRouter);
 
 app.get("/test-db", async (req, res) => {
     try {
-        const result = await pool.query('SELECT NOW()');
+        const result = await pool.query("SELECT NOW()");
 
         res.json(result.rows[0]);
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Database connection failed' });
+        res.status(500).json({ error: "Database connection failed" });
     }
 });
 
@@ -32,8 +34,8 @@ app.get("/test-storage", async (req, res) => {
 
         res.json(data);
     } catch (error) {
-        console.error(err);
-        res.status(500).json({ error: 'Storage connection failed' });
+        console.error(error);
+        res.status(500).json({ error: "Storage connection failed" });
     }
 });
 
