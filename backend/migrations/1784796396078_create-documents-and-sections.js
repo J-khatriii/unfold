@@ -26,7 +26,7 @@ export const up = (pgm) => {
             content TEXT NOT NULL,
             is_read BOOLEAN NOT NULL DEFAULT false
         );    
-    `)
+    `);
 }
 
 /**
