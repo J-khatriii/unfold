@@ -30,7 +30,7 @@ export const createDocument = async (file, fileType) => {
 
   const result = await pool.query(
     `INSERT INTO documents (filename, file_type, status)
-    VALUES ($1, $2, "processing")
+    VALUES ($1, $2, 'processing')
     RETURNING id, filename, file_type, status`,
     [file.originalname, fileType]
   );
@@ -57,11 +57,38 @@ export const createDocument = async (file, fileType) => {
     // rm
     console.log("4c. All sections inserted");
 
-    await pool.query(`UPDATE documents SET status = "ready" WHERE id = $1`, [document.id]);
+    await pool.query(`UPDATE documents SET status = 'ready' WHERE id = $1`, [document.id]);
 
-    return { ...document, status: "ready" };
+    return { ...document, status: 'ready' };
   } catch (error) {
-    await pool.query(`UPDATE documents SET status = "failed" WHERE id = $1`, [document.id]);
+    await pool.query(`UPDATE documents SET status = 'failed' WHERE id = $1`, [document.id]);
     throw error;
+  }
+}
+
+export const getAllDocuments = async () => {
+  const result = await pool.query('SELECT id, filename, file_type, status, created_at FROM documents ORDER BY created_at DESC');
+
+  return result.rows;
+}
+
+export const getDocumentSections = async (documentId) => {
+  const docResult = await pool.query(
+    'SELECT id, filename, status FROM documents WHERE id = $1',
+    [documentId]
+  );
+
+  if(docResult.rows.length === 0) {
+    return null;
+  }
+
+  const sectionsResult = await pool.query(
+    'SELECT id, order_index, title, content, is_read FROM sections WHERE document_id = $1 ORDER BY order_index',
+    [documentId]
+  );
+
+  return {
+    document: docResult.rows[0],
+    sections: sectionsResult.rows,
   }
 }
