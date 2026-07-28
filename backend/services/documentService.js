@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import pool from "../config/db.js";
 import supabase from "../config/storage.js";
-import { parseDocument } from "./parsingService.js";
+import parseDocument from "./parsingService.js";
 
 const ALLOWED_TYPES = {
   "application/pdf": "pdf",
