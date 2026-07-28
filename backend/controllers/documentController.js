@@ -1,4 +1,4 @@
-import { getFileType, createDocument, getAllDocuments, getDocumentSections } from "..//services/documentService.js";
+import { getFileType, createDocument, getAllDocuments, getDocumentSections } from "../services/documentService.js";
 
 const uploadDocument = async (req, res) => {
   // rm

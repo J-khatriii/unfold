@@ -1,8 +1,16 @@
+import { BrowserRouter, Routes, Route } from "react-router";
+
+import UploadScreen from "./components/UploadScreen";
+import ReaderScreen from "./components/ReaderScreen";
+
 const App = () => {
   return (
-    <div>
-      <h1>unfold</h1>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<UploadScreen />} />
+        <Route path="/documents/:id" element={<ReaderScreen />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
