@@ -1,66 +1,91 @@
 import { useState, useEffect } from "react";
 import { data, useParams } from "react-router";
+
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
+
 import { fetchDocumentSections } from "../api";
+import Loading from "./Loading";
 
 const ReaderScreen = () => {
-    const { id } = useParams();
-    const [document, setDocument] = useState(null);
-    const [sections, setSections] = useState([]);
-    const [activeIndex, setActiveIndex] = useState(0);
-    const [error, setError] = useState(null);
+  const { id } = useParams();
 
-    useEffect(() => {
-        fetchDocumentSections(id)
-        .then((data) => {
-            setDocument(data.document);
-            setSections(data.sections);
-            setActiveIndex(0)
-        })
-        .catch((error) => setError(error.message));
-    }, [id]);
+  const [document, setDocument] = useState(null);
+  const [sections, setSections] = useState([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [error, setError] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-    if (error) {
-        return <p className="p-8 text-red-600">{error}</p>;
-    }
+  useEffect(() => {
+    fetchDocumentSections(id)
+    .then((data) => {
+      setDocument(data.document);
+      setSections(data.sections);
+      setActiveIndex(0)
+    })
+    .catch((error) => setError(error.message));
+  }, [id]);
 
-    if (!document) {
-        return <p className="p-8 text-slate-500">Loading...</p>;
-    }
+  if (error) {
+    return <p className="p-8 text-red-600">{error}</p>;
+  }
 
-    const activeSection = sections[activeIndex];
+  if (!document) {
+    return <Loading />
+  }
+
+  const activeSection = sections[activeIndex];
 
   return (
     <div className="flex h-screen bg-slate-50">
-      <aside className="w-72 shrink-0 overflow-y-auto border-r border-slate-200 bg-white p-6">
-        <p className="mb-1 text-xs font-medium uppercase tracking-wide text-amber-600">
-          Reading
-        </p>
-        <h3 className="mb-6 truncate text-sm font-semibold text-slate-900">
-          {document.filename}
-        </h3>
+      {isSidebarOpen && (
+        <aside className="w-65 shrink-0 overflow-y-auto border-r border-slate-200 bg-white p-6">
+          <div className="mb-6 flex items-start justify-between">
+            <div>
+              <p className="mb-1 text-xs font-medium uppercase tracking-wide text-amber-600">
+                Reading
+              </p>
+              <h3 className="truncate text-sm font-semibold text-slate-900">
+                {document.filename}
+              </h3>
+            </div>
 
-        <nav className="space-y-1">
-          {sections.map((section, index) => (
-            <button
-              key={section.id}
-              onClick={() => setActiveIndex(index)}
-              className={`block w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
-                index === activeIndex
-                  ? 'bg-amber-50 font-medium text-amber-900'
-                  : 'text-slate-600 hover:bg-slate-50'
-              }`}
-            >
-              {section.title}
+            <button onClick={() => setIsSidebarOpen(false)}>
+              <PanelLeftClose size={20} color="black" />
             </button>
-          ))}
-        </nav>
-      </aside>
+          </div>
+
+          <nav className="space-y-1">
+            {sections.map((section, index) => (
+              <button
+                key={section.id}
+                onClick={() => setActiveIndex(index)}
+                className={`block w-full rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                  index === activeIndex
+                    ? "bg-amber-50 font-medium text-amber-900"
+                    : "text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                {section.title}
+              </button>
+            ))}
+          </nav>
+        </aside>
+      )}
 
       <main className="flex-1 overflow-y-auto">
+        {!isSidebarOpen && (
+          <button
+            onClick={() => setIsSidebarOpen(true)}
+            className="absolute left-4 top-4 rounded-md border bg-white p-2 shadow hover:bg-slate-50"
+          >
+            <PanelLeftOpen size={20} color="black" />
+          </button>
+        )}
+
         {activeSection && (
           <div className="mx-auto max-w-2xl px-8 py-12">
             <div
-              className="prose prose-slate max-w-none font-serif text-lg leading-relaxed text-slate-800"
+              className="max-w-none font-serif text-lg leading-relaxed text-slate-800 [&>p]:mb-5"
               dangerouslySetInnerHTML={{ __html: activeSection.content }}
             />
 

@@ -1,147 +1,86 @@
-// import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
-
-// // pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-
-// const pdfParse = async (buffer) => {
-//     const uint8Array = new Uint8Array(
-//         buffer.buffer,
-//         buffer.byteOffset,
-//         buffer.byteLength
-//     );
-
-//     const doc = await pdfjsLib.getDocument({ data: uint8Array }).promise;
-
-//     const pages = [];
-
-//     for(let i = 1; i <= doc.numPages; i++) {
-//         const page = await doc.getPage(i);
-//         const content = await page.getTextContent();
-//         const viewPort = page.getViewport({ scale : 1});
-
-//         const items = content.items.map((item) => ({
-//             text: item.str,
-//             y: Math.round(item.transform[5]),
-//             height: viewPort.height,
-//         }));
-
-//         pages.push(items);
-//     }
-
-//     return pages;
-// }
-
-// export default pdfParse;
-
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 
+import {
+  detectRecurringBoundaryLines,
+  extractPagesRaw, 
+  groupItemsIntoLines, 
+  groupLinesIntoParagraphs, 
+  isBarePageNumber, 
+  normalizeForComparison, 
+  paginateParagraphs,
+} from "./textCleanup.js";
+
+// const HEADER_FOOTER_ZONE = 0.08;
+const BOUNDARY_LINE_COUNT = 3;
+
 const pdfParse = async (buffer) => {
-  const uint8Array = new Uint8Array(
-    buffer.buffer,
-    buffer.byteOffset,
-    buffer.byteLength
-  );
+  // rm
+  // const safeBuffer = new Uint8Array(buffer);
+  const rawPages = await extractPagesRaw(buffer);
 
-  const pdf = await pdfjsLib.getDocument({ data: uint8Array }).promise;
+  const pagesOfLines = rawPages.map((p) => groupItemsIntoLines(p.items));
+  const boundaryLines = detectRecurringBoundaryLines(pagesOfLines);
 
-  const sections = [];
+  // rm
+  console.log('DEBUG: boundary lines detected:', [...boundaryLines]);
 
-//   for (let i = 1; i <= pdf.numPages; i++) {
-//     const page = await pdf.getPage(i);
-//     const content = await page.getTextContent();
+  const cleanedParagraphsByPage = pagesOfLines.map((lines) => {
+    const contentLines = lines.filter((line, index) => {
+      const isEdgeLine = index < BOUNDARY_LINE_COUNT || index >= lines.length - BOUNDARY_LINE_COUNT;
+      const key = normalizeForComparison(line.text);
 
-//     const text = content.items
-//       .map(item => item.str)
-//       .join(" ")
-//       .replace(/\s+/g, " ")
-//       .trim();
+      if (isEdgeLine && boundaryLines.has(key)) {
+        return false;
+      }
+      
+      if (isEdgeLine && isBarePageNumber(line.text)) {
+        return false;
+      }
 
-//     sections.push({
-//       order_index: i - 1,
-//       title: `Page ${i}`,
-//       content: text,
-//     });
-//   }
-
-for (let i = 1; i <= pdf.numPages; i++) {
-  const page = await pdf.getPage(i);
-  const textContent = await page.getTextContent();
-
-  // Group text by Y coordinate (same visual line)
-  const lines = new Map();
-
-  for (const item of textContent.items) {
-    if (!("str" in item)) continue;
-
-    const x = item.transform[4];
-    const y = Math.round(item.transform[5]);
-
-    if (!lines.has(y)) {
-      lines.set(y, []);
-    }
-
-    lines.get(y).push({
-      text: item.str,
-      x,
-      width: item.width,
-      fontSize: Math.abs(item.transform[3]),
+      return true;
     });
-  }
 
-  // Sort lines from top to bottom
-  const sortedLines = [...lines.entries()].sort((a, b) => b[0] - a[0]);
-
-  let pageText = "";
-  let previousY = null;
-
-  for (const [y, words] of sortedLines) {
-    // Sort words left to right
-    words.sort((a, b) => a.x - b.x);
-
-    let line = "";
-
-    for (let j = 0; j < words.length; j++) {
-      const current = words[j];
-
-      if (j > 0) {
-        const previous = words[j - 1];
-
-        // Gap between previous word and current word
-        const gap = current.x - (previous.x + previous.width);
-
-        if (gap > 25) {
-          line += "    "; // big horizontal gap
-        } else {
-          line += " ";
-        }
-      }
-
-      line += current.text;
-    }
-
-    // Paragraph detection
-    if (previousY !== null) {
-      const verticalGap = previousY - y;
-
-      if (verticalGap > 22) {
-        pageText += "\n\n";
-      } else {
-        pageText += "\n";
-      }
-    }
-
-    pageText += line.trimEnd();
-    previousY = y;
-  }
-
-  sections.push({
-    order_index: i - 1,
-    title: `Page ${i}`,
-    content: pageText,
+    return groupLinesIntoParagraphs(contentLines);
   });
-}
 
-  return sections;
+  const allParagraphs = cleanedParagraphsByPage.flat();
+
+  return paginateParagraphs(allParagraphs);
 }
 
 export default pdfParse;
 
+
+// const pdfParse = async (buffer) => {
+//   const rawPages = await extractPagesRaw(buffer);
+//   const pageHeights = rawPages.map((p) => p.height);
+
+//   const pagesOfLines = rawPages.map((p) => groupItemsIntoLines(p.items));
+//   const boundaryLines = detectRecurringBoundaryLines(pagesOfLines, pageHeights);
+
+//   console.log('DEBUG: total pages:', rawPages.length);
+//   console.log('DEBUG: boundary lines detected:', [...boundaryLines]);
+
+//   console.log('DEBUG: page 1 lines with y-position:');
+//   pagesOfLines[0]?.forEach((l) => console.log(`  y=${l.y.toFixed(1)} height=${pageHeights[0].toFixed(1)} "${l.text}"`));
+
+//   const cleanedParagraphsByPage = pagesOfLines.map((lines, i) => {
+//     const height = pageHeights[i];
+
+//     const contentLines = lines.filter((line) => {
+//       const nearTop = line.y > height * (1 - HEADER_FOOTER_ZONE);
+//       const nearBottom = line.y < height * HEADER_FOOTER_ZONE;
+//       const key = line.text.replace(/\d+/g, '#');
+
+//       if ((nearTop || nearBottom) && boundaryLines.has(key)) return false;
+//       if ((nearTop || nearBottom) && isBarePageNumber(line.text)) return false;
+
+//       return true;
+//     });
+
+//     return groupLinesIntoParagraphs(contentLines);
+//   });
+
+//   const allParagraphs = cleanedParagraphsByPage.flat();
+//   return paginateParagraphs(allParagraphs);
+// }
