@@ -1,4 +1,9 @@
-import { getFileType, createDocument, getAllDocuments, getDocumentSections } from "../services/documentService.js";
+import {
+  getFileType,
+  createDocument,
+  getAllDocuments, 
+  getDocumentSections,
+} from "../services/documentService.js";
 
 const uploadDocument = async (req, res) => {
   // rm
@@ -9,7 +14,7 @@ const uploadDocument = async (req, res) => {
   console.log("1. Request received, file: ", req.file?.originalname);
 
   if (!req.file) {
-    return res.status(400).json({error: "No file uploaded" });
+    return res.status(400).json({ error: "No file uploaded" });
   }
 
   const fileType = getFileType(req.file.mimetype);
@@ -23,6 +28,7 @@ const uploadDocument = async (req, res) => {
 
   try {
     const document = await createDocument(req.file, fileType);
+
     res.status(201).json(document);
   } catch (error) {
     console.error(error);
