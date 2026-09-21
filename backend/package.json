@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.3",
     "@supabase/supabase-js": "^2.110.8",
     "cheerio": "^1.2.0",
     "cors": "^2.8.6",
